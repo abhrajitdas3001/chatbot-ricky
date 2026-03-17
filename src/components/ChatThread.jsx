@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import Image from 'next/image'
 import { User, Volume2, Square } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 
@@ -51,7 +52,16 @@ const Message = ({
           <User className="user-avatar-icon" strokeWidth={1.5} />
         </div>
       ) : (
-        <div className="ai-avatar">Ricky</div>
+        <div className="ai-avatar">
+          <Image
+            src="/ricky-avatar.jpg"
+            alt="Ricky"
+            width={48}
+            height={48}
+            className="ai-avatar-img"
+            unoptimized
+          />
+        </div>
       )}
       <div className="message-content-wrapper">
         <span className="message-sender">
@@ -137,7 +147,16 @@ const ChatThread = ({
 
       {status === 'submitted' && (
         <div className="thinking-row">
-          <div className="ai-avatar">Ricky</div>
+          <div className="ai-avatar">
+            <Image
+              src="/ricky-avatar.jpg"
+              alt="Ricky"
+              width={48}
+              height={48}
+              className="ai-avatar-img"
+              unoptimized
+            />
+          </div>
           <div className="typing-indicator">
             <span></span>
             <span></span>
