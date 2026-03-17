@@ -1,0 +1,35 @@
+{
+  "name": "ai-chatbot",
+  "version": "0.1.0",
+  "private": true,
+  "overrides": {
+    "zod": "^4.1.8"
+  },
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^3.0.0",
+    "@ai-sdk/react": "^2.0.0",
+    "@tavily/ai-sdk": "^0.4.1",
+    "ai": "^6.0.116",
+    "dexie": "^4.0.11",
+    "dexie-react-hooks": "^1.1.7",
+    "lucide-react": "^0.509.0",
+    "next": "^15.5.12",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
+    "zod": "^4.1.8"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "eslint": "^9",
+    "eslint-config-next": "15.3.2",
+    "tailwindcss": "^4"
+  }
+}
