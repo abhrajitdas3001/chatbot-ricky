@@ -1,41 +1,90 @@
-# Building a Modern AI Chat Application with Next.js and OpenAI
-This is the repository for the LinkedIn Learning course `Building a Modern AI Chat Application with Next.js and OpenAI`. The full course is available from [LinkedIn Learning][lil-course-url].
+# Ricky – AI Chat
 
-![course-name-alt-text][lil-thumbnail-url] 
+A personalised AI chat app built with Next.js and OpenAI. Ricky is a conversational assistant with a distinct persona—a 39-year-old software engineer from Kolkata, now in London—who loves sports, cooking, and tech.
 
-## Course Description
+## Features
 
-In this hands-on course, technical content creator Ebenezer Don guides you through building an AI chat application using Next.js and OpenAI GPT models. Learn how to create a fully functional chatbot with features like conversation threading, message persistence, and real-time responses. The course emphasizes best practices in state management, API integration, and modern UI development. When you complete the course, you will have a production-ready AI chat application that showcases modern web development practices.
+- **Chat with Ricky** – AI assistant with a custom persona (see [RICKY_PERSONA.md](./RICKY_PERSONA.md))
+- **Web search** – Uses Tavily for real-time answers on general knowledge and current events
+- **Chat persistence** – Conversations stored locally in IndexedDB (Dexie)
+- **Voice input** – Speech-to-text via the Web Speech API
+- **Text-to-speech** – Read aloud responses using OpenAI TTS with 13 voice options
+- **Multiple chats** – Separate threads with auto-generated titles
 
-_See the readme file in the main branch for updated instructions and information._
+## Tech Stack
+
+- **Framework**: Next.js 15 (App Router)
+- **AI**: Vercel AI SDK, OpenAI GPT-4.1, Tavily (web search)
+- **Database**: Dexie (IndexedDB) for local storage
+- **Speech**: Web Speech API (input), OpenAI TTS (output)
 
 ## Setup
 
-1. Add `openai_api_key` to `.env.local` for the chat model.
-2. For web search (general knowledge questions), add `TAVILY_API_KEY` to `.env.local`. Get a free key at [Tavily](https://app.tavily.com/).
-3. **TTS (text-to-speech):** Uses your existing `openai_api_key` with OpenAI's built-in voices. Choose a voice from the picker in the sidebar.
+### 1. Install dependencies
 
-## Instructions
-This repository has branches for each of the videos in the course. You can use the branch pop up menu in github to switch to a specific branch and take a look at the course at that stage, or you can add `/tree/BRANCH_NAME` to the URL to go to the branch you want to access.
+```bash
+npm install
+```
 
-## Branches
-The branches are structured to correspond to the videos in the course. The naming convention is `CHAPTER#_MOVIE#`. As an example, the branch named `02_03` corresponds to the second chapter and the third video in that chapter. 
-Some branches will have a beginning and an end state. These are marked with the letters `b` for "beginning" and `e` for "end". The `b` branch contains the code as it is at the beginning of the movie. The `e` branch contains the code as it is at the end of the movie. The `main` branch holds the final state of the code when in the course.
+### 2. Environment variables
 
-When switching from one exercise files branch to the next after making changes to the files, you may get a message like this:
+Create `.env.local` in the project root:
 
-    error: Your local changes to the following files would be overwritten by checkout:        [files]
-    Please commit your changes or stash them before you switch branches.
-    Aborting
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `openai_api_key` | Yes | OpenAI API key for chat and TTS |
+| `TAVILY_API_KEY` | No | Tavily key for web search |
 
-To resolve this issue:
-	
-    Add changes to git using this command: git add .
-	Commit changes using this command: git commit -m "some message"
+Get keys:
+- **OpenAI**: [platform.openai.com](https://platform.openai.com/api-keys)
+- **Tavily**: [app.tavily.com](https://app.tavily.com/) (free tier)
 
+### 3. Run the app
 
-[0]: # (Replace these placeholder URLs with actual course URLs)
+```bash
+npm run dev
+```
 
-[lil-course-url]: https://www.linkedin.com/learning/hands-on-ai-build-an-ai-chatbot-with-gpt-4o-and-next-js
-[lil-thumbnail-url]: https://media.licdn.com/dms/image/v2/D4E0DAQG35oVjgWP9cA/learning-public-crop_675_1200/B4EZc3qeSZH0Ao-/0/1748985570771?e=2147483647&v=beta&t=59hJHD4ViN-SdcPPRWe_J1fAvYIJmC8WVStCt2nB6OQ
+Open [http://localhost:3000](http://localhost:3000).
 
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── chat/route.js      # Chat + web search
+│   │   ├── generate-title/route.js
+│   │   └── tts/route.js       # OpenAI TTS
+│   ├── page.js                # Main chat page
+│   └── layout.js
+├── components/
+│   ├── ChatThread.jsx          # Message list + TTS
+│   └── Sidebar.jsx            # Chat list + voice picker
+├── hooks/
+│   ├── useSpeechRecognition.js  # Voice input
+│   └── useSpeechSynthesis.js    # Voice output
+└── lib/
+    └── db.js                  # Dexie persistence
+```
+
+## How It Works
+
+- **Chat**: Messages are sent to `/api/chat`, which uses the AI SDK with streaming and Tavily web search.
+- **Persistence**: Chats and messages are saved in IndexedDB. Titles are generated from the first message.
+- **Voice input**: Microphone button uses the Web Speech API for speech-to-text.
+- **TTS**: Speak button uses the OpenAI TTS API. Voice selection is in the sidebar.
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start dev server (Turbopack) |
+| `npm run build` | Production build |
+| `npm run start` | Run production server |
+| `npm run lint` | Run ESLint |
+
+## Customising Ricky
+
+- **Persona**: Edit the system prompt in `src/app/api/chat/route.js`
+- **Persona reference**: See [RICKY_PERSONA.md](./RICKY_PERSONA.md) for details and expansion ideas
