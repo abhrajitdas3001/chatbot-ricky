@@ -4,6 +4,7 @@ import { useState, useCallback, useRef } from 'react'
 
 const VOICE_STORAGE_KEY = 'ai-chat-tts-voice'
 const DEFAULT_VOICE = 'alloy'
+const CACHE_MAX_SIZE = 10
 
 export const TTS_VOICES = [
   { id: 'alloy', label: 'Alloy' },
@@ -68,6 +69,7 @@ export function useSpeechSynthesis() {
   const abortControllerRef = useRef(null)
   const audioRef = useRef(null)
   const utteranceRef = useRef(null)
+  const cacheRef = useRef(new Map())
 
   const setVoice = useCallback((newVoice) => {
     const id = typeof newVoice === 'string' ? newVoice : newVoice?.id
@@ -97,6 +99,39 @@ export function useSpeechSynthesis() {
     setSpeakingMessageId(null)
   }, [])
 
+  const fetchAndCache = useCallback(
+    async (cleanText, messageId) => {
+      const cacheKey = messageId ?? cleanText.slice(0, 100)
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: cleanText, voice }),
+      })
+      if (!res.ok) return null
+      const blob = await res.blob()
+      const cache = cacheRef.current
+      if (cache.size >= CACHE_MAX_SIZE) {
+        const firstKey = cache.keys().next().value
+        if (firstKey !== undefined) cache.delete(firstKey)
+      }
+      cache.set(cacheKey, blob)
+      return blob
+    },
+    [voice]
+  )
+
+  const preload = useCallback(
+    (text, messageId = null) => {
+      if (!text || typeof window === 'undefined') return
+      const cleanText = cleanTextForSpeech(text)
+      if (!cleanText) return
+      const cacheKey = messageId ?? cleanText.slice(0, 100)
+      if (cacheRef.current.has(cacheKey)) return
+      fetchAndCache(cleanText, messageId)
+    },
+    [fetchAndCache]
+  )
+
   const speak = useCallback(
     async (text, messageId = null) => {
       if (!text || typeof window === 'undefined') return
@@ -118,28 +153,40 @@ export function useSpeechSynthesis() {
         setSpeakingMessageId(null)
       }
 
+      const cacheKey = messageId ?? cleanText.slice(0, 100)
+      let blob = cacheRef.current.get(cacheKey)
+
       try {
-        const controller = new AbortController()
-        abortControllerRef.current = controller
+        if (!blob) {
+          const controller = new AbortController()
+          abortControllerRef.current = controller
 
-        const res = await fetch('/api/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: cleanText,
-            voice,
-          }),
-          signal: controller.signal,
-        })
+          const res = await fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: cleanText,
+              voice,
+            }),
+            signal: controller.signal,
+          })
 
-        abortControllerRef.current = null
+          abortControllerRef.current = null
 
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}))
-          throw new Error(data.error || `TTS failed: ${res.status}`)
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}))
+            throw new Error(data.error || `TTS failed: ${res.status}`)
+          }
+
+          blob = await res.blob()
+          const cache = cacheRef.current
+          if (cache.size >= CACHE_MAX_SIZE) {
+            const firstKey = cache.keys().next().value
+            if (firstKey !== undefined) cache.delete(firstKey)
+          }
+          cache.set(cacheKey, blob)
         }
 
-        const blob = await res.blob()
         const url = URL.createObjectURL(blob)
         const audio = new Audio(url)
 
@@ -183,6 +230,7 @@ export function useSpeechSynthesis() {
   return {
     speak,
     stop,
+    preload,
     isSpeaking,
     speakingMessageId,
     isSupported,

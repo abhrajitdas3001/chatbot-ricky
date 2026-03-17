@@ -9,7 +9,6 @@ import '../styles/sidebar.css'
 export default function Sidebar({
   fetchedChats,
   currentChatId,
-  setCurrentChatId,
   initializeNewChat,
   ttsVoice,
   onTtsVoiceChange,
@@ -55,10 +54,7 @@ export default function Sidebar({
             <Link
               key={chat.id}
               href={`/?chatId=${chat.id}`}
-              onClick={() => {
-                setCurrentChatId(chat.id)
-                closeSidebar()
-              }}
+              onClick={closeSidebar}
               className={`chat-item ${
                 currentChatId === chat.id ? 'chat-item-active' : ''
               }`}

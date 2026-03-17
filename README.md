@@ -53,7 +53,9 @@ Open [http://localhost:3000](http://localhost:3000).
 src/
 ├── app/
 │   ├── api/
-│   │   ├── chat/route.js      # Chat + web search
+│   │   ├── chat/
+│   │   │   ├── route.js       # Chat + web search (streaming)
+│   │   │   └── simple/route.js # Simple JSON API (non-streaming)
 │   │   ├── generate-title/route.js
 │   │   └── tts/route.js       # OpenAI TTS
 │   ├── page.js                # Main chat page
@@ -65,7 +67,29 @@ src/
 │   ├── useSpeechRecognition.js  # Voice input
 │   └── useSpeechSynthesis.js    # Voice output
 └── lib/
-    └── db.js                  # Dexie persistence
+    ├── db.js                  # Dexie persistence
+    └── ricky-prompt.js         # Ricky system prompt (shared)
+```
+
+## API for External Products
+
+A simple JSON endpoint is available for non-streaming use:
+
+**`POST /api/chat/simple`**
+
+| Request | Description |
+|---------|-------------|
+| `{ "message": "Hello" }` | Single message, get one reply |
+| `{ "messages": [{ "role": "user", "content": "..." }, { "role": "assistant", "content": "..." }] }` | Full conversation history |
+
+**Response:** `{ "reply": "..." }`
+
+CORS is enabled (`Access-Control-Allow-Origin: *`) for cross-origin requests.
+
+```bash
+curl -X POST http://localhost:3000/api/chat/simple \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is your favourite curry?"}'
 ```
 
 ## How It Works
@@ -86,5 +110,5 @@ src/
 
 ## Customising Ricky
 
-- **Persona**: Edit the system prompt in `src/app/api/chat/route.js`
+- **Persona**: Edit the system prompt in `src/lib/ricky-prompt.js`
 - **Persona reference**: See [RICKY_PERSONA.md](./RICKY_PERSONA.md) for details and expansion ideas

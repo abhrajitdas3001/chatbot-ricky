@@ -17,7 +17,8 @@ export async function POST(req) {
         without any quotes (max 5 words): "${message}"`,
     })
 
-    return NextResponse.json({ title: text })
+    const title = (text || '').trim().replace(/^["']|["']$/g, '')
+    return NextResponse.json({ title: title || 'New Chat' })
   } catch (error) {
     return NextResponse.json(
       { error: 'Failed to generate title' },

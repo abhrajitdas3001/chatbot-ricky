@@ -11,7 +11,7 @@ import {
   deleteChat,
   getChat,
 } from '../lib/db'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { SendHorizontal, MinusCircle, Mic, MicOff } from 'lucide-react'
 import ChatThread from '@/components/ChatThread'
@@ -22,15 +22,19 @@ import Sidebar from '@/components/Sidebar'
 
 export default function Chat() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const chatThreadRef = useRef(null)
   const activeChatIdRef = useRef(null)
+  const lastFetchedChatsRef = useRef(null)
 
-  const [currentChatId, setCurrentChatId] = useState(null)
+  const chatIdFromUrl = searchParams.get('chatId')
+  const currentChatId = chatIdFromUrl ? Number(chatIdFromUrl) : null
   const [input, setInput] = useState('')
 
   const {
     speak,
     stop: stopSpeaking,
+    preload,
     isSpeaking,
     speakingMessageId,
     isSupported: ttsSupported,
@@ -51,6 +55,9 @@ export default function Chat() {
   const fetchedChats = useLiveQuery(() =>
     db.chats.orderBy('createdAt').reverse().toArray(),
   )
+
+  const chatsToShow = fetchedChats ?? lastFetchedChatsRef.current ?? []
+  if (fetchedChats) lastFetchedChatsRef.current = fetchedChats
 
   const currentChat = useLiveQuery(
     () => db.chats.get(Number(currentChatId)),
@@ -90,7 +97,6 @@ export default function Chat() {
     (chatId) => {
       activeChatIdRef.current = chatId
       router.push(`/?chatId=${chatId}`)
-      setCurrentChatId(chatId)
     },
     [router],
   )
@@ -102,12 +108,13 @@ export default function Chat() {
 
   const setActiveChat = useCallback(
     async (requestedChatId = null) => {
-      if (fetchedChats && fetchedChats?.length === 0) {
+      const chats = fetchedChats ?? lastFetchedChatsRef.current ?? []
+      if (chats.length === 0) {
         return initializeNewChat()
       }
 
       if (requestedChatId) navigateToChat(Number(requestedChatId))
-      else navigateToChat(fetchedChats?.[0].id)
+      else navigateToChat(chats[0]?.id)
     },
     [navigateToChat, initializeNewChat, fetchedChats],
   )
@@ -126,8 +133,9 @@ export default function Chat() {
       if (!response.ok) throw new Error('Failed to generate title')
 
       const { title } = await response.json()
-      if (title) {
-        await updateChatTitle(targetChatId, title)
+      const cleanTitle = title?.trim()?.replace(/^["']|["']$/g, '') || ''
+      if (cleanTitle) {
+        await updateChatTitle(targetChatId, cleanTitle)
       }
     } catch (error) {
       console.error('Error generating title', error)
@@ -139,24 +147,37 @@ export default function Chat() {
   }
 
   useEffect(() => {
-    if (!fetchedChats) return
+    if (fetchedChats === undefined && lastFetchedChatsRef.current == null) return
 
     if (!currentChatId) {
-      const chatId = new URLSearchParams(window.location.search).get('chatId')
-      setActiveChat(chatId)
+      setActiveChat(chatIdFromUrl)
+      return
     }
 
+    if (status === 'streaming' || status === 'submitted') return
+
     const loadChatMessages = async () => {
+      const chatIdToLoad = currentChatId
       try {
-        const loadedMessages = await getChatMessages(currentChatId)
-        setMessages(loadedMessages)
+        const loadedMessages = await getChatMessages(chatIdToLoad)
+        if (activeChatIdRef.current !== chatIdToLoad) return
+        const formatted = loadedMessages.map((m) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+        }))
+        setMessages(formatted)
       } catch (error) {
         console.error('Failed to load messages', error)
       }
     }
 
     loadChatMessages()
-  }, [fetchedChats, currentChatId, setActiveChat, setMessages])
+  }, [fetchedChats, currentChatId, chatIdFromUrl, status, setActiveChat, setMessages])
+
+  useEffect(() => {
+    activeChatIdRef.current = currentChatId
+  }, [currentChatId])
 
   useEffect(() => {
     if (chatThreadRef.current && messages.length > 0) {
@@ -182,7 +203,7 @@ export default function Chat() {
 
     await saveMessage(chatId, 'user', text)
 
-    if (isFirstMessage) generateTitle(text, chatId)
+    if (isFirstMessage) await generateTitle(text, chatId)
 
     setInput('')
     await sendMessage({ text })
@@ -194,20 +215,19 @@ export default function Chat() {
     if (window.confirm('Are you sure you want to delete this chat?')) {
       await deleteChat(currentChatId)
       router.push('/')
-      setCurrentChatId(null)
     }
   }, [currentChatId, router])
 
-  if (!fetchedChats) {
+  const isInitialLoad = fetchedChats === undefined && lastFetchedChatsRef.current == null
+  if (isInitialLoad) {
     return <div className="loading-state">Loading...</div>
   }
 
   return (
     <div className="chat-container">
       <Sidebar
-        fetchedChats={fetchedChats}
+        fetchedChats={chatsToShow}
         currentChatId={currentChatId}
-        setCurrentChatId={setCurrentChatId}
         initializeNewChat={initializeNewChat}
         ttsVoice={voice}
         onTtsVoiceChange={setVoice}
@@ -231,6 +251,7 @@ export default function Chat() {
           status={status}
           chatThreadRef={chatThreadRef}
           onSpeak={speak}
+          onPreloadTts={preload}
           speakingMessageId={speakingMessageId}
           stopSpeaking={stopSpeaking}
           ttsSupported={ttsSupported}

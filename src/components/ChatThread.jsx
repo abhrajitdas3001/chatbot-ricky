@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { User, Volume2, Square } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 
@@ -17,6 +18,7 @@ const Message = ({
   content,
   messageId,
   onSpeak,
+  onPreloadTts,
   speakingMessageId,
   stopSpeaking,
   ttsSupported,
@@ -24,6 +26,15 @@ const Message = ({
   isStreaming,
 }) => {
   const isThisMessageSpeaking = speakingMessageId === messageId
+
+  useEffect(() => {
+    const canPreload = role === 'assistant' && content && onPreloadTts
+    const isComplete = !isLastMessage || !isStreaming
+    if (canPreload && isComplete) {
+      onPreloadTts(content, messageId)
+    }
+  }, [role, content, messageId, onPreloadTts, isLastMessage, isStreaming])
+
   const handleSpeak = () => {
     if (isThisMessageSpeaking) {
       stopSpeaking()
@@ -80,6 +91,7 @@ const ChatThread = ({
   status,
   chatThreadRef,
   onSpeak,
+  onPreloadTts,
   speakingMessageId,
   stopSpeaking,
   ttsSupported,
@@ -97,6 +109,7 @@ const ChatThread = ({
         <Message
           {...welcomeMessage}
           onSpeak={onSpeak}
+          onPreloadTts={onPreloadTts}
           speakingMessageId={speakingMessageId}
           stopSpeaking={stopSpeaking}
           ttsSupported={ttsSupported}
@@ -112,6 +125,7 @@ const ChatThread = ({
             content={message.content ?? getMessageContent(message)}
             messageId={message.id ?? index}
             onSpeak={onSpeak}
+            onPreloadTts={onPreloadTts}
             speakingMessageId={speakingMessageId}
             stopSpeaking={stopSpeaking}
             ttsSupported={ttsSupported}
